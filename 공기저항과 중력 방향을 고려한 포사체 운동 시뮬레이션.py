@@ -9,31 +9,31 @@ gamma = 0.001  # 공기 저항 상수
 x0 = 0.1  # 초기 위치 (x 방향)
 y0 = 6400*1000 +1000  # 초기 위치 (y 방향)
 
-# 해석적 해 (공기 저항 있는 경우와 없는 경우)
+# 공기 저항 고려, 중력 방향 고려X
 t_vals = np.linspace(0, 500, 1000)
 X = x0 + (vx0 / gamma) * (1 - np.exp(-gamma * t_vals))
 Y = y0 + (vy0 / gamma + g / gamma**2) * (1 - np.exp(-gamma * t_vals)) - (g / gamma) * t_vals
 
+# 단순 포물선 운동
 X2 = x0 + vx0 * t_vals
 Y2 = y0 + vy0 * t_vals - 0.5 * g * t_vals**2
 
-# 수치적 시뮬레이션
+# 공기 저항과 중력 방향 모두 고려
 t = 0
 dt = 0.5  # 시간 간격
 position_x = [x0]
 position_y = [y0]
 
 while t < 500:
-    t += dt  # 시간 업데이트
+    t += dt 
 
-    # 각도 psi 계산 (atan2 사용)
+    # 각도 psi 계산 
     psi = abs(np.arctan(position_y[-1]/position_x[-1]))
 
-    # 새로운 위치 계산 (이전 위치를 사용)
+    # 새로운 위치 계산
     new_x = x0 + ((vx0 / gamma) + (g / gamma**2 * np.cos(psi))) * (1 - np.exp(-gamma * t)) - (g / gamma) * np.cos(psi) * t
     new_y = y0 + ((vy0 / gamma) + (g / gamma**2 * np.sin(psi))) * (1 - np.exp(-gamma * t)) - (g / gamma) * np.sin(psi) * t
 
-    # 위치 업데이트
     position_x.append(new_x)
     position_y.append(new_y)
 print(psi)
