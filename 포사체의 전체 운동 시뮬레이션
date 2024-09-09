@@ -1,0 +1,191 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import math
+
+# 기본 설정
+g = 9.8
+vx0 = 1000 # 초기 속도 (x 방향)
+vy0 = 9000  # 초기 속도 (y 방향)
+gamma = 0.01  # 공기 저항 상수
+x0 = 0.1  # 초기 위치 (x 방향)
+R = 6400*1000
+R2 = 6500*1000
+y0 = 6400*1000 +1000  # 초기 위치 (y 방향)
+
+# 구면 이동에 따라 바뀌는 중력 방향과 공기 저항(속력에 비례)를 고려한 포사체 운동
+
+t = 0
+dt = 0.01  # 시간 간격
+position_x = [x0]
+position_y = [y0]
+v_x = [vx0]
+v_y = [vy0]
+count = 0
+while t < 1000 :
+    t += dt  # 시간 업데이트
+
+    if position_x[-1]**2 + position_y[-1]**2 < R2**2:
+       
+       # 매 위치마다 지구 중심에 대한 포사체의 각도
+        psi = abs(np.arctan(position_y[-1]/position_x[-1]))
+
+        # 새로운 위치 계산
+        new_x = x0 + ((vx0 / gamma) + (g / gamma**2 * np.cos(psi))) * (1 - np.exp(-gamma * t)) - (g / gamma) * np.cos(psi) * t
+        new_y = y0 + ((vy0 / gamma) + (g / gamma**2 * np.sin(psi))) * (1 - np.exp(-gamma * t)) - (g / gamma) * np.sin(psi) * t
+
+        # 위치 기록
+        position_x.append(new_x)
+        position_y.append(new_y)
+
+        # 각 위치마다의 속도 기록
+        v_x.append((new_x - position_x[-2])/dt)
+        v_y.append((new_y - position_y[-2])/dt)
+
+        if position_x[-1]**2 + position_y[-1]**2 < R**2:
+            break
+
+    else:
+        count = 1
+        break
+
+theta = np.linspace(0, 2*np.pi, 100000) # 타원 궤도를 작도할 세타값(물리적 의미는 없음)
+
+
+# 포사체 운동 궤적 그리기
+
+plt.plot(position_x, position_y, label="With Air Resistance (Numerical)", linestyle='-', color ='r')
+
+plt.xlabel('X Position (m)')
+plt.ylabel('Y Position (m)')
+plt.title('Projectile Motion with Air Resistance and Kepler orbit')
+plt.grid(True)
+
+
+if count == 1:
+    # 케플러 타원 궤도
+
+    m = 1 # 포사체 질량
+    k = g*R**2*m # G*m*M 값
+    l = abs(position_x[-1]*v_y[-1] - position_y[-1]*v_x[-1]) # 단위질량 당 각운동량 (만유인력이 중심력이라 보존됨)
+    E = 0.5*m*(v_x[-1]**2  +v_y[-1]**2) - (k/np.sqrt(position_x[-1]**2 + position_y[-1]**2)) # 포사체의 총 에너지
+
+
+
+
+    # 지구를 원일점으로 하는 타원 궤도 운동
+    r = (m*l**2/k)/(1 + np.sqrt(1+(2*E*m*l**2/k**2))*np.cos(theta+np.pi))
+
+    # 회전 변환하지 않은 타원 궤도
+    Xr = r*np.cos(theta)
+    Yr = r*np.sin(theta)
+
+    # 본 카르만 영역에 도달한 포사체까지의 거리와 포사체의 발사각을 케플러 타원궤도와 비교하여 케플러 타원 궤도의 r값이 포세체까지의 거리와 같은 그 지점까지 타원 궤도 회전 변환함
+    r_list = []
+    theta_list = [] # 라디안 단위
+
+    for i, rr in enumerate(r):
+    
+     if  abs((rr - np.sqrt(position_x[-1]**2 + position_y[-1]**2))/np.sqrt(position_x[-1]**2 + position_y[-1]**2)) < 0.001 and abs((rr - np.sqrt(position_x[-1]**2 + position_y[-1]**2))/np.sqrt(position_x[-1]**2 + position_y[-1]**2)) > 0.0005:
+        
+         if math.degrees(theta[i]-np.pi) > 0:
+             r_list.append(rr)
+             theta_list.append(2*np.pi - theta[i])
+
+
+    num = len(theta_list)//2
+
+    # 회전 변환하는 각도
+    rot_angle = np.arctan(position_y[-1]/position_x[-1]) -theta_list[num] 
+
+
+    #  회전 변환한 타원 궤도의 x값, y값
+    Xr_rot = Xr*np.cos(rot_angle) - Yr*np.sin(rot_angle)
+    Yr_rot = Xr*np.sin(rot_angle) + Yr*np.cos(rot_angle)
+
+    # 회전 변환한 타원 궤도
+    # plt.plot(Xr_rot, Yr_rot, label ='Kepler orbit')
+
+    R_rot = np.sqrt(Xr_rot**2 + Yr_rot**2)
+
+    index_list = []
+
+    # 본 카르만 영역과 회전 변환한 타원 궤도가 만나는 지점을 알아내기 위한 계산
+    for i, rrr in enumerate(R_rot):
+        if abs((rrr-R2)/R2) <0.001 and abs((rrr-R2)/R2) > 0.0005:
+            index_list.append(i)
+
+        # 본 카르만 영역 위의 타원 궤도의 x값, y값
+    X_von = list(reversed(list(Xr_rot[index_list[-1]:]) +list(Xr_rot[1:index_list[1]]))) 
+    Y_von = list(reversed(list(Yr_rot[index_list[-1]:]) +list(Yr_rot[1:index_list[1]]))) 
+
+    # 본 카르만 영역 바깥에서만 도는 회전 변환한 타원 궤도 그리기
+    plt.plot(X_von[:int((len(X_von)*1))], Y_von[:int((len(Y_von)*1))], label ='Kepler orbit above von karman line', color ='g', linestyle = '-')
+
+
+    # 지구 재진입 각도
+
+    psi_re = np.pi + np.arctan(abs((Y_von[-1]-Y_von[-2])/(X_von[-1]-X_von[-2])))
+
+
+    # 지구에 재진입 했을 때의 속도 : 본 카르만 영역에 진입한 포사체의 속력과 타원 운동을 하고 다시 재진입했을 때의 속력은 동일하고 각도는 재진입 각도를 따름 (본 카르만 영역과 케플러 타원 궤도가 대칭이므로)
+    
+    if X_von[-1] - X_von[-2] > 0:
+        vx_re = - np.sqrt(v_x[-1]**2 + v_y[-1]**2)*np.cos(psi_re)
+    else:
+        vx_re = np.sqrt(v_x[-1]**2 + v_y[-1]**2)*np.cos(psi_re)
+
+    if Y_von[-1] -Y_von[-2] < 0 :
+
+        vy_re = np.sqrt(v_x[-1]**2 + v_y[-1]**2)*np.sin(psi_re)
+    else:
+        vy_re = -np.sqrt(v_x[-1]**2 + v_y[-1]**2)*np.sin(psi_re)
+    
+    # print(vx_re, vy_re)
+
+    # 재진입 후 포사체 운동
+    t = 0
+    dt = 0.01  # 시간 간격
+    position_xre = [X_von[-1]]
+    position_yre = [Y_von[-1]]
+    v_xre = [vx_re]
+    v_yre = [vy_re]
+   
+    while t < 5000 :
+        t += dt  # 시간 업데이트
+
+        if position_xre[-1]**2 + position_yre[-1]**2 > R**2:
+            # 각도 psi 계산 (atan2 사용)
+            psi2 = np.arctan(abs(position_yre[-1]/position_xre[-1]))
+
+            # 새로운 위치 계산 (이전 위치를 사용)
+            new_xre = X_von[-1] + ((vx_re / gamma) + (g / gamma**2 * np.cos(psi2))) * (1 - np.exp(-gamma * t)) - (g / gamma) * np.cos(psi2) * t
+            new_yre = Y_von[-1] + ((vy_re / gamma) + (g / gamma**2 * np.sin(psi2))) * (1 - np.exp(-gamma * t)) - (g / gamma) * np.sin(psi2) * t
+
+            # 위치 업데이트
+            position_xre.append(new_xre)
+            position_yre.append(new_yre)
+
+            v_x.append((new_xre - position_xre[-2])/dt)
+            v_y.append((new_yre - position_yre[-2])/dt)
+
+        else:
+            break
+
+    # 재진입 후 포사체 운동 경로
+    plt.plot(position_xre, position_yre, label ='reentry projectile motion with air resistance', linestyle='-', color ='b')
+
+# 지구 지표면
+plt.plot(R*np.cos(theta), R*np.sin(theta), label = "earth's surface", color ='k', linestyle = '--')
+
+# 카르만 영역
+plt.plot(R2*np.cos(theta), R2*np.sin(theta), label = 'von karman line', color ='k', linestyle = ':')
+
+
+# plt.ylim(R*0.7, 1.5*R)
+
+# X축과 Y축의 비율을 같게 설정
+plt.gca().set_aspect('equal', adjustable='box')
+plt.legend()
+
+# 모든 그림이 중첩된 plot 보여주기
+plt.show()
