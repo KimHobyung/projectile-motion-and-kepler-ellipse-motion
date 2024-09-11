@@ -38,9 +38,8 @@ while t < 500:
     position_y.append(new_y)
 print(psi)
 
-plt.rcParams['font.family'] = 'Malgun Gothic'  # 맑은 고딕으로 설정
-plt.rcParams['axes.unicode_minus'] = False  # 마이너스 기호 깨짐 방지
-
+plt.rcParams['font.family'] = 'Malgun Gothic'  
+plt.rcParams['axes.unicode_minus'] = False  
 # 그래프 그리기
 plt.plot(X, Y, label="공기저항 고려 (지표면의 곡률을 고려하지 않음)")
 plt.plot(X2, Y2, label="공기저항 없는 포사체 운동")
